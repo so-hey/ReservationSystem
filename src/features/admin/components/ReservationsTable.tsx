@@ -16,7 +16,7 @@ import ReservationsTablePagination from './ReservationsTablePagination';
 import ReservationCalendar from './ReservationCalendar';
 import { getAllReservations } from '@/lib/functions';
 import { ReservationListResponse } from '@/shared/types';
-import { formatRoomLabel, getStatusBadgeInfo } from '@/shared/utils';
+import { formatRoomLabel, getStatusBadgeInfo, getActualStatus } from '@/shared/utils';
 import ReservationDetail from './ReservationDetail';
 
 const MotionTableRow = motion.create(Table.Row);
@@ -27,70 +27,6 @@ export default function ReservationsTable() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // 現在時刻と予約時間から実際の使用状態を判定する関数
-  const getActualStatus = (item: ReservationListResponse) => {
-    // 既に完了済みの状態の場合は元の状態のまま
-    const currentStatus = String(item.status);
-    if (
-      currentStatus === 'RETURNED' ||
-      currentStatus === 'COMPLETED' ||
-      currentStatus === 'CANCELLED' ||
-      currentStatus === 'REJECTED'
-    ) {
-      return currentStatus;
-    }
-
-    const now = new Date();
-
-    // 予約日をDateオブジェクトに変換
-    const reservationDate = new Date(item.reservationDate);
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const reservationDay = new Date(
-      reservationDate.getFullYear(),
-      reservationDate.getMonth(),
-      reservationDate.getDate(),
-    );
-
-    // 過去の予約で承認済みの場合は返却待ちとする
-    if (reservationDay < today && currentStatus === 'APPROVED') {
-      return 'WAITED';
-    }
-
-    // 今日以外の予約は元の状態のまま
-    if (reservationDay.getTime() !== today.getTime()) {
-      return currentStatus;
-    }
-
-    // 時刻文字列を比較用の数値に変換（分単位）
-    const timeToMinutes = (timeStr: string) => {
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      return hours * 60 + minutes;
-    };
-
-    const currentMinutes = now.getDate() * 24 * 60 + now.getHours() * 60 + now.getMinutes();
-    const startMinutes =
-      new Date(item.reservationDate).getDate() * 24 * 60 + timeToMinutes(item.startTime);
-    const endMinutes =
-      new Date(item.reservationDate).getDate() * 24 * 60 + timeToMinutes(item.endTime);
-
-    // 使用開始前
-    if (currentMinutes < startMinutes) {
-      return 'APPROVED';
-    }
-
-    // 使用時間内
-    if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
-      return 'USING';
-    }
-
-    // 使用時間終了後
-    if (currentMinutes >= endMinutes) {
-      return 'WAITED';
-    }
-
-    return currentStatus;
-  };
 
   // 予約状態に応じたバッジの色・ラベル・アイコンを返す関数
   const getStatusBadgeProps = (status: string) => {

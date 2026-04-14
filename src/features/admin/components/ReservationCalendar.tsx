@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Box, VStack, HStack, Heading, Button, Badge, Text, Grid, Card } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { ReservationListResponse } from '@/shared/types';
-import { formatRoomLabel, getStatusBadgeInfo } from '@/shared/utils';
+import { formatRoomLabel, getStatusBadgeInfo, getActualStatus } from '@/shared/utils';
 
 interface ReservationCalendarProps {
   data: ReservationListResponse[];
@@ -182,7 +182,7 @@ export default function ReservationCalendar({
                   {/* 予約バッジ */}
                   <VStack gap={1} align="stretch">
                     {day.reservations.slice(0, 3).map((reservation) => {
-                        const { color, variant } = getStatusBadgeInfo(String(reservation.status));
+                        const { color, variant } = getStatusBadgeInfo(getActualStatus(reservation));
                         return (
                           <Badge
                             key={reservation.id}

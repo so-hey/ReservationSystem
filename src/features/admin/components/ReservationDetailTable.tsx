@@ -1,6 +1,6 @@
 import { Box, Table, Badge } from '@chakra-ui/react';
 import { ReservationDetailResponse } from '@/shared/types';
-import { formatRoomLabel, formatTimeToHHMM, formatDateOnly, getStatusBadgeInfo } from '@/shared/utils';
+import { formatRoomLabel, formatTimeToHHMM, formatDateOnly, getStatusBadgeInfo, getActualStatus } from '@/shared/utils';
 
 interface ReservationDetailTableProps {
   data?: ReservationDetailResponse;
@@ -92,7 +92,7 @@ const ReservationDetailTable = ({ data }: ReservationDetailTableProps) => {
               <Table.Cell {...TABLE_STYLES.cell}>{data?.createdAt ? `${formatDateOnly(data.createdAt)} ${formatTimeToHHMM(data.createdAt)}` : ''}</Table.Cell>
               <Table.Cell {...TABLE_STYLES.cell}>
                 {data?.status
-                  ? (() => { const { color, label, variant } = getStatusBadgeInfo(String(data.status)); return <Badge colorPalette={color} variant={variant}>{label}</Badge>; })()
+                  ? (() => { const { color, label, variant } = getStatusBadgeInfo(data ? getActualStatus(data) : ''); return <Badge colorPalette={color} variant={variant}>{label}</Badge>; })()
                   : ''}
               </Table.Cell>
               <Table.Cell {...TABLE_STYLES.cell}>{data?.returnTime ? `${formatDateOnly(data.returnTime)} ${formatTimeToHHMM(data.returnTime)}` : '-'}</Table.Cell>

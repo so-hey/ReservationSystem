@@ -1,9 +1,66 @@
+import { ReservationListResponse } from '../types';
+
 /**
  * 部屋コードを日本語ラベルに変換
  */
 export const formatRoomLabel = (room: string): string => {
   const map: Record<string, string> = { LARGE: '大', SMALL: '小' };
   return map[room] ?? room;
+};
+
+/**
+ * 現在時刻と予約時間から実際の使用状態を判定する
+ * サーバーから取得したステータスを時刻ベースで補正し、表示用ステータスを返す
+ * ReservationListResponse / ReservationDetailResponse の両方に対応
+ */
+export const getActualStatus = (
+  item: Pick<ReservationListResponse, 'status' | 'reservationDate' | 'startTime' | 'endTime'>,
+): string => {
+  const currentStatus = String(item.status);
+
+  // 終端状態はそのまま返す
+  if (
+    currentStatus === 'RETURNED' ||
+    currentStatus === 'COMPLETED' ||
+    currentStatus === 'CANCELLED' ||
+    currentStatus === 'REJECTED'
+  ) {
+    return currentStatus;
+  }
+
+  const now = new Date();
+
+  const reservationDate = new Date(item.reservationDate);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const reservationDay = new Date(
+    reservationDate.getFullYear(),
+    reservationDate.getMonth(),
+    reservationDate.getDate(),
+  );
+
+  // 過去の予約で承認済みの場合は返却待ちとする
+  if (reservationDay < today && currentStatus === 'APPROVED') {
+    return 'WAITED';
+  }
+
+  // 今日以外の予約は元の状態のまま
+  if (reservationDay.getTime() !== today.getTime()) {
+    return currentStatus;
+  }
+
+  // 時刻文字列を分単位の数値に変換
+  const timeToMinutes = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const startMinutes = timeToMinutes(item.startTime);
+  const endMinutes = timeToMinutes(item.endTime);
+
+  if (currentMinutes < startMinutes) return 'APPROVED';
+  if (currentMinutes < endMinutes)   return 'USING';
+  return 'WAITED';
 };
 
 /**
