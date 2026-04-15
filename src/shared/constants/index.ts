@@ -1,13 +1,16 @@
 import { AvailableTime } from '../types';
 
 /**
- * 1日先から90日先までの日付リストを生成
+ * 1日先から90日先までの日付リスト（土日除外）を生成
  */
 export const DATE_UNTIL_NEXT_MONTH: string[] = Array.from({ length: 90 }, (_, i) => {
   const date = new Date();
   date.setDate(date.getDate() + i + 1);
-  return date.toISOString().split('T')[0];
-});
+  return date;
+}).filter((date) => {
+  const day = date.getDay();
+  return day !== 0 && day !== 6; // 日曜(0)・土曜(6)を除外
+}).map((date) => date.toISOString().split('T')[0]);
 
 /**
  * 利用可能な時間テーブル（09:00〜17:30, 30分刻み）
