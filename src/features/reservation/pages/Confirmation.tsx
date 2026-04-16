@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useScrollToTop } from '@/shared/hooks/useScrollToTop';
 import {
@@ -32,69 +31,26 @@ import {
   LuExternalLink,
 } from 'react-icons/lu';
 import { ReservationCreateRequest } from '@/shared/types';
-import { createReservation } from '@/lib/functions';
 import { formatRoomLabel } from '@/shared/utils';
+import { useConfirmReservation } from '../hooks/useConfirmReservation';
 
 export default function Confirmation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [guidelinesAccepted, setGuidelinesAccepted] = useState(false);
 
   const formData = location.state?.reservationData as ReservationCreateRequest;
 
   // ページロード時にトップにスクロール
   useScrollToTop();
 
-  const handleConfirm = async () => {
-    if (!guidelinesAccepted) {
-      setError('使用事項とガイドラインへの同意が必要です。');
-      return;
-    }
-
-    setSubmitting(true);
-    setError(''); // エラーメッセージをクリア
-
-    try {
-      // createReservationはリトライ機能付き（最大3回試行）
-      const data = await createReservation(formData);
-
-      // 成功した場合、レスポンスから適切にtokenを取得
-      const token = data.token || data;
-
-      navigate(`/complete/${token}`, {
-        state: {
-          message: '予約を確定しました',
-          type: 'reserve',
-        },
-      });
-    } catch (error: any) {
-      console.error('予約確定エラー:', error);
-
-      // ApiErrorからメッセージを取得
-      let errorMessage = '予約の確定に失敗しました。もう一度お試しください。';
-
-      if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      // 特定のエラーメッセージに対する分かりやすい表示
-      if (errorMessage.includes('指定された時間帯に既に予約が存在します')) {
-        errorMessage =
-          '申し訳ございません。選択された時間帯は既に予約されています。別の時間帯をお選びください。';
-      }
-
-      setError(errorMessage);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleGoHome = () => {
-    // 入力内容を復元するためにreservationDataをstateで渡す
-    navigate('/reserve', { state: { reservationData: formData } });
-  };
+  const {
+    submitting,
+    error,
+    guidelinesAccepted,
+    setGuidelinesAccepted,
+    handleConfirm,
+    handleGoBack: handleGoHome,
+  } = useConfirmReservation(formData);
 
   if (!formData) {
     return (

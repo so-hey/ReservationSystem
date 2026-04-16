@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useScrollToTop } from '@/shared/hooks/useScrollToTop';
 import {
@@ -32,199 +31,52 @@ import {
   LuX,
   LuClipboardCheck,
 } from 'react-icons/lu';
-import { getReservationCancelReturnPageData, updateReservationStatus } from '@/lib/functions';
-import { ReservationDetailResponse } from '@/shared/types';
 import { formatDateToJapanese, formatRoomLabel, formatTimeToHHMM } from '@/shared/utils';
+import { useReturnReservation } from '../hooks/useReturnReservation';
+import { useImageUpload } from '../hooks/useImageUpload';
+import { useChecklist } from '../hooks/useChecklist';
 
 export default function Return() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ページロード時にトップにスクロール
   useScrollToTop();
 
-  const [data, setData] = useState<ReservationDetailResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const { data, loading, submitting, error, setError, handleReturn: doReturn } = useReturnReservation(token);
+  const {
+    fileInputRef,
+    selectedFiles,
+    previewUrls,
+    error: uploadError,
+    setError: setUploadError,
+    handleFileSelect,
+    handleFileRemove,
+  } = useImageUpload();
+  const { checklist, damageDetails, setDamageDetails, handleChecklistChange, allChecklistCompleted } =
+    useChecklist();
 
-  // チェックリストのステート管理
-  const [checklist, setChecklist] = useState({
-    roomCleaning: false,
-    lightsAndLock: false,
-    fireCheck: false,
-    furnitureReset: false,
-    damageCheck: false,
-  });
-  const [damageDetails, setDamageDetails] = useState<string>('');
+  const displayError = error || uploadError;
+  const clearErrors = () => { setError(''); setUploadError(''); };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!token) {
-        setError('無効なトークンです');
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const fetchedData = await getReservationCancelReturnPageData('return', token);
-        setData(fetchedData);
-      } catch (error) {
-        console.error(error);
-        setError(`${(error as Error).message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [token]);
-
-  // ファイル選択時の処理
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
-
-    // 4枚制限チェック
-    if (selectedFiles.length + files.length > 4) {
-      setError('画像は最大4枚まで選択できます');
-      return;
-    }
-
-    const validFiles: File[] = [];
-    const newPreviewUrls: string[] = [];
-
-    for (const file of files) {
-      // ファイルタイプチェック
-      if (!file.type.startsWith('image/')) {
-        setError('画像ファイルのみ選択してください');
-        return;
-      }
-
-      // ファイルサイズチェック (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('各ファイルのサイズは5MB以下にしてください');
-        return;
-      }
-
-      validFiles.push(file);
-      newPreviewUrls.push(URL.createObjectURL(file));
-    }
-
-    setSelectedFiles((prev) => [...prev, ...validFiles]);
-    setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
-    setError('');
-  };
-
-  // ファイル削除（特定のファイル）
-  const handleFileRemove = (index: number) => {
-    // プレビューURLをクリーンアップ
-    if (previewUrls[index]) {
-      URL.revokeObjectURL(previewUrls[index]);
-    }
-
-    // 配列から削除
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
-
-    // 全ファイルが削除された場合、input要素をリセット
-    if (selectedFiles.length === 1) {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  // チェックリスト更新
-  const handleChecklistChange = (key: keyof typeof checklist) => {
-    setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  // 全チェック項目が完了しているかチェック
-  const allChecklistCompleted = Object.values(checklist).every(Boolean);
-
-  // 返却処理
-  const handleReturn = async () => {
-    if (!data) return;
-
-    if (!allChecklistCompleted) {
-      setError('全てのチェック項目を確認してください');
-      return;
-    }
-
-    if (selectedFiles.length === 0) {
-      setError('返却画像をアップロードしてください');
-      return;
-    }
-
-    setSubmitting(true);
-    setError(''); // エラーメッセージをクリア
-
-    try {
-      const formData = new FormData();
-      formData.append('damageDetails', damageDetails);
-      selectedFiles.forEach((file) => {
-        formData.append('returnImages', file, file.name);
-      });
-
-      for (const data of formData.entries()) {
-        console.log(data);
-      }
-
-      await updateReservationStatus(data.id, 'return', formData);
-
-      navigate(`/complete/${token}`, {
-        state: {
-          message: '返却が完了しました',
-          type: 'return',
-        },
-      });
-    } catch (error) {
-      console.error('返却処理に失敗しました:', error);
-
-      // エラーの種類に応じて適切なメッセージを表示
-      if (error instanceof Error) {
-        if (error.message.includes('変換に失敗')) {
-          setError(error.message);
-        } else if (error.message.includes('ネットワーク')) {
-          setError('ネットワークエラーが発生しました。インターネット接続を確認してください。');
-        } else {
-          setError(`返却処理に失敗しました: ${error.message}`);
-        }
-      } else {
-        setError('予期しないエラーが発生しました。しばらく経ってから再度お試しください。');
-      }
-    } finally {
-      setSubmitting(false);
-    }
+  const handleReturn = () => {
+    clearErrors();
+    doReturn(selectedFiles, damageDetails, allChecklistCompleted, (msg) => {
+      setError(msg);
+    });
   };
 
   const handleGoHome = () => {
-    // HOMEページに遷移（HomeページのuseEffectでアニメーションスクロールが実行される）
     navigate('/');
   };
 
-  // コンポーネントのクリーンアップ
-  useEffect(() => {
-    return () => {
-      previewUrls.forEach((url) => {
-        if (url) {
-          URL.revokeObjectURL(url);
-        }
-      });
-    };
-  }, [previewUrls]);
-
-  if (error && !data) {
+  if (displayError && !data) {
     return (
       <PageContainer title="エラー" titleColor="red.700">
         <Alert.Root status="error">
           <Alert.Indicator />
           <Alert.Title>エラー</Alert.Title>
-          <Alert.Description>{error}</Alert.Description>
+          <Alert.Description>{displayError}</Alert.Description>
         </Alert.Root>
         <PageActions delay={0.1}>
           <Button onClick={handleGoHome}>戻る</Button>
@@ -542,10 +394,10 @@ export default function Return() {
                     </Box>
                   </Alert.Root>
 
-                  {error && (
+                  {displayError && (
                     <Alert.Root status="error">
                       <Alert.Indicator />
-                      <Alert.Description>{error}</Alert.Description>
+                      <Alert.Description>{displayError}</Alert.Description>
                     </Alert.Root>
                   )}
                 </VStack>

@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
 import { Box, VStack, HStack, Heading, Button, Badge, Text, Grid, Card } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { ReservationListResponse } from '@/shared/types';
 import { formatRoomLabel, getStatusBadgeInfo, getActualStatus } from '@/shared/utils';
+import { useCalendarNavigation } from '../hooks/useCalendarNavigation';
 
 interface ReservationCalendarProps {
   data: ReservationListResponse[];
@@ -12,83 +12,12 @@ interface ReservationCalendarProps {
 // 曜日の配列（日〜土）
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
-// 月の日数を取得
-const getDaysInMonth = (year: number, month: number) => {
-  return new Date(year, month + 1, 0).getDate();
-};
-
 export default function ReservationCalendar({
   data,
   onSelectReservation,
 }: ReservationCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
-  // 前月へ
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
-  };
-
-  // 次月へ
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
-  };
-
-  // 今月へ
-  const handleToday = () => {
-    setCurrentDate(new Date());
-  };
-
-  // カレンダーの日付データを生成（全曜日）
-  const calendarDays = useMemo(() => {
-    const daysInMonth = getDaysInMonth(year, month);
-    const days: Array<{
-      date: number | null;
-      reservations: ReservationListResponse[];
-      dayOfWeek: number;
-    }> = [];
-
-    // 今月の全日付
-    for (let date = 1; date <= daysInMonth; date++) {
-      const currentDate = new Date(year, month, date);
-      const dayOfWeek = currentDate.getDay();
-
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(
-        2,
-        '0',
-      )}`;
-      const dayReservations = data.filter((item) => item.reservationDate === dateStr);
-      days.push({ date, reservations: dayReservations, dayOfWeek });
-    }
-
-    // 最初の週の空白を追加（日曜始まりに調整）
-    const firstWeekday = days.length > 0 ? days[0].dayOfWeek : 0;
-    const blanksAtStart = firstWeekday; // getDay() は日曜=0 なのでそのまま使用
-    for (let i = 0; i < blanksAtStart; i++) {
-      days.unshift({ date: null, reservations: [], dayOfWeek: -1 });
-    }
-
-    // 最後の週を埋める
-    const totalCells = days.length;
-    const remainingInLastWeek = totalCells % 7;
-    if (remainingInLastWeek !== 0) {
-      const cellsToAdd = 7 - remainingInLastWeek;
-      for (let i = 0; i < cellsToAdd; i++) {
-        days.push({ date: null, reservations: [], dayOfWeek: -1 });
-      }
-    }
-
-    return days;
-  }, [year, month, data]);
-
-  // 今日の日付
-  const today = new Date();
-  const isToday = (date: number | null) => {
-    if (date === null) return false;
-    return date === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-  };
+  const { year, month, calendarDays, isToday, handlePrevMonth, handleNextMonth, handleToday } =
+    useCalendarNavigation(data);
 
   return (
     <VStack width="100%" gap={{ base: 2, md: 4 }} align="stretch">

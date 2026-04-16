@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import { Box, Stack, Table, VStack, Button, HStack, Badge, Tabs } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import {
@@ -15,35 +15,28 @@ import {
 } from 'react-icons/lu';
 import ReservationsTablePagination from './ReservationsTablePagination';
 import ReservationCalendar from './ReservationCalendar';
-import { getAllReservations } from '@/lib/functions';
-import { ReservationListResponse } from '@/shared/types';
 import { formatRoomLabel, getStatusBadgeInfo, getActualStatus } from '@/shared/utils';
 import ReservationDetail from './ReservationDetail';
-
-// アクションが必要な状態を優先するための優先度マップ
-const STATUS_PRIORITY: Record<string, number> = {
-  PENDING:   0, // 最優先
-  RETURNED:  0, // 最優先
-  APPROVED:  1,
-  USING:     1,
-  WAITED:    1,
-  COMPLETED: 2,
-  CANCELLED: 2,
-  REJECTED:  2,
-};
+import { useReservationList } from '../hooks/useReservationList';
+import { useReservationSort } from '../hooks/useReservationSort';
+import { useReservationPagination } from '../hooks/useReservationPagination';
 
 const MotionTableRow = motion.create(Table.Row);
 
 export default function ReservationsTable() {
-  const [data, setData] = useState<ReservationListResponse[]>([]);
-  const [reload, setReload] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [sortKey, setSortKey] = useState<'id' | 'status'>('id');
+  const [openDetailId, setOpenDetailId] = useState<number | null>(null);
 
-  // 予約状態に応じたバッジの色・ラベル・アイコンを返す関数
-  const getStatusBadgeProps = useCallback((status: string) => {
+  const { data, loading, handleRefresh, triggerReload } = useReservationList();
+  const { sortKey, setSortKey, sortOrder, setSortOrder, sortedData } = useReservationSort(data);
+  const { currentPage, totalPages, paginatedItems, handlePageChange } = useReservationPagination(sortedData);
+
+  const onCloseDetail = () => {
+    setOpenDetailId(null);
+    triggerReload();
+  };
+
+  const getStatusBadgeProps = (status: string) => {
     const { color, label, variant } = getStatusBadgeInfo(status);
     const iconMap: Record<string, React.ReactNode> = {
       'PENDING':   <LuClock size={12} />,
@@ -56,74 +49,7 @@ export default function ReservationsTable() {
       'REJECTED':  <LuX size={12} />,
     };
     return { colorPalette: color, variant, text: label, icon: iconMap[status] ?? null };
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await getAllReservations();
-      setData(res);
-    } catch (error) {
-      console.error('データの取得に失敗しました:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [reload]);
-
-  // リアルタイム更新のため1分ごとにデータを再取得
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // 現在表示中のページがある場合のみ自動更新
-      if (!loading) {
-        fetchData();
-      }
-    }, 60000); // 1分間隔
-
-    return () => clearInterval(interval);
-  }, [loading]);
-
-  const handleRefresh = () => {
-    setReload(!reload);
   };
-
-  const [openDetailId, setOpenDetailId] = useState<number | null>(null);
-
-  const onCloseDetail = () => {
-    setOpenDetailId(null);
-    setReload(!reload);
-  };
-
-  const [currentPage, setCurrentPage] = useState<number>(1);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo(0, 0);
-  };
-
-  const itemsPerPage = 10;
-  const itemLength = data.length;
-  const totalPages = Math.max(Math.ceil(itemLength / itemsPerPage), 1);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-
-  const getStatusPriority = useCallback((item: ReservationListResponse) => {
-    return STATUS_PRIORITY[getActualStatus(item)] ?? 1;
-  }, []);
-
-  // ソート
-  const sortedData = useMemo(() => [...data].sort((a, b) => {
-    if (sortKey === 'status') {
-      const pd = getStatusPriority(a) - getStatusPriority(b);
-      if (pd !== 0) return pd;
-      return b.id - a.id; // 同一優先度内はID降順（新しい順）
-    }
-    return sortOrder === 'desc' ? b.id - a.id : a.id - b.id;
-  }), [data, sortKey, sortOrder, getStatusPriority]);
-
-  const paginatedItems = sortedData.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <VStack width="100%">
@@ -305,8 +231,8 @@ export default function ReservationsTable() {
           <Stack align="center" width="100%" my={4}>
             <ReservationsTablePagination
               currentPage={currentPage}
-              itemsPerPage={itemsPerPage}
-              itemLength={itemLength}
+              itemsPerPage={10}
+              itemLength={sortedData.length}
               totalPages={totalPages}
               onPageChange={handlePageChange}
             />

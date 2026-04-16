@@ -1,10 +1,11 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, VStack, Card, Text, Button, Heading, Alert } from '@chakra-ui/react';
-import { LuCheck, LuMail, LuX, LuPackage } from 'react-icons/lu';
 import { useScrollToTop } from '@/shared/hooks/useScrollToTop';
 import PageContainer from '@/shared/components/layout/PageContainer';
 import AnimatedCard from '@/shared/components/ui/AnimatedCard';
 import PageActions from '@/shared/components/ui/PageActions';
+import { useCompletionDisplay } from '../hooks/useCompletionDisplay';
+import { LuMail, LuX, LuPackage } from 'react-icons/lu';
 
 export default function Completion() {
   const location = useLocation();
@@ -14,44 +15,8 @@ export default function Completion() {
   useScrollToTop();
 
   const type = location.state?.type;
-
-  const getDefaultMessage = () => {
-    switch (type) {
-      case 'cancel':
-        return '予約キャンセルが完了しました';
-      case 'return':
-        return '予約返却が完了しました';
-      case 'reserve':
-      default:
-        return '予約申請が完了しました';
-    }
-  };
-
+  const { getDefaultMessage, getIcon, getColor } = useCompletionDisplay(type);
   const message = location.state?.message || getDefaultMessage();
-
-  const getIcon = () => {
-    switch (type) {
-      case 'cancel':
-        return <LuX size="4rem" />;
-      case 'return':
-        return <LuPackage size="4rem" />;
-      case 'reserve':
-      default:
-        return <LuCheck size="4rem" />;
-    }
-  };
-
-  const getColor = () => {
-    switch (type) {
-      case 'cancel':
-        return 'red.500';
-      case 'return':
-        return 'blue.500';
-      case 'reserve':
-      default:
-        return 'green.500';
-    }
-  };
 
   const handleGoHome = () => {
     navigate('/');

@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useState } from 'react';
 import { Box, VStack, HStack, Card, Text, Button, Heading, Alert } from '@chakra-ui/react';
 import { LuUser, LuCalendar, LuClock, LuArrowLeft } from 'react-icons/lu';
 import { useScrollToTop } from '@/shared/hooks/useScrollToTop';
@@ -12,9 +11,9 @@ import { ShowAvailableTime } from '../components/ShowAvailableTime';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { DATE_UNTIL_NEXT_MONTH, TIME_TABLE } from '@/lib/constants';
-import { fetchAvailableTimes } from '@/lib/functions';
-import { AvailableTime, ReservationCreateRequest } from '@/shared/types';
+import { ReservationCreateRequest } from '@/shared/types';
 import { formatRoomLabel } from '@/shared/utils';
+import { useAvailableTimes } from '../hooks/useAvailableTimes';
 
 export default function Reservation() {
   const navigate = useNavigate();
@@ -42,45 +41,7 @@ export default function Reservation() {
   const room = methods.watch('room');
   const startTime = methods.watch('startTime');
 
-  const [availableTimes, setAvailableTimes] = useState<AvailableTime[]>(TIME_TABLE);
-
-  const getAvailableTime = useCallback(
-    async (reservationDate: string, room: string, retryCount = 0) => {
-      const maxRetries = 3;
-
-      try {
-        const result = await fetchAvailableTimes(reservationDate, room);
-        setAvailableTimes(result);
-      } catch (error) {
-        console.error(`利用可能時間の取得に失敗しました (${retryCount + 1}/${maxRetries}):`, error);
-
-        if (retryCount < maxRetries - 1) {
-          setTimeout(() => {
-            getAvailableTime(reservationDate, room, retryCount + 1);
-          }, 1000 * (retryCount + 1));
-        } else {
-          console.error('最大リトライ回数に達しました');
-          setAvailableTimes(TIME_TABLE);
-        }
-      }
-    },
-    [setAvailableTimes],
-  );
-
-  useEffect(() => {
-    if (reservationDate && room) {
-      getAvailableTime(reservationDate, room);
-    } else {
-      setAvailableTimes(TIME_TABLE);
-    }
-  }, [reservationDate, room, getAvailableTime]);
-
-  // 復元データがある場合の初期化
-  useEffect(() => {
-    if (restoredData?.reservationDate && restoredData?.room) {
-      getAvailableTime(restoredData.reservationDate, restoredData.room);
-    }
-  }, [restoredData, getAvailableTime]);
+  const { availableTimes } = useAvailableTimes(reservationDate, room, restoredData);
 
   const studentIdPattern = /^[A-Z]{2}\d{2}[A-Z]\d{3}$/;
   const studentIdMessage = '学籍番号の形式が不正です（例: AB00C000）';
