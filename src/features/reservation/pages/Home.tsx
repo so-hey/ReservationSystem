@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { VStack, HStack, Card, Text, Button, Heading, Separator } from '@chakra-ui/react';
-import { LuCalendarPlus, LuSearch, LuShield } from 'react-icons/lu';
+// import { VStack, HStack, Card, Text, Button, Heading, Separator } from '@chakra-ui/react';
+import { VStack, HStack, Card, Text, Button, Heading } from '@chakra-ui/react';
+// import { LuCalendarPlus, LuSearch, LuShield } from 'react-icons/lu';
+import { LuCalendarPlus, LuSearch } from 'react-icons/lu';
 import { useScrollToTop } from '@/shared/hooks/useScrollToTop';
 import PageContainer from '@/shared/components/layout/PageContainer';
 import AnimatedCard from '@/shared/components/ui/AnimatedCard';
-import PageActions from '@/shared/components/ui/PageActions';
+// import PageActions from '@/shared/components/ui/PageActions';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -16,9 +18,9 @@ export default function Home() {
     navigate('/reserve');
   };
 
-  const handleGoToAdmin = () => {
-    navigate('/admin');
-  };
+  // const handleGoToAdmin = () => {
+  //   navigate('/admin');
+  // };
 
   return (
     <PageContainer title="兵庫県立大学商科キャンパス 部室棟予約システム" titleColor="blue.600">
@@ -39,7 +41,7 @@ export default function Home() {
                 ミーティングルームのご予約はこちらから
               </Text>
               <Text color="blue.600" fontSize="sm">
-                予約の確定時に使用事項とガイドラインの確認をお願いします
+                予約の確定時に使用事項と使用規程の確認をお願いします
               </Text>
               <Button size="xl" colorScheme="blue" px={12} py={6} onClick={handleMakeReservation}>
                 新規予約
@@ -88,7 +90,7 @@ export default function Home() {
           </Card.Body>
         </AnimatedCard>
 
-        <PageActions delay={0.5}>
+        {/* <PageActions delay={0.5}>
           <Separator mb={4} />
           <VStack gap={2}>
             <Text fontSize="xs" color="gray.500" textAlign="center">
@@ -101,7 +103,7 @@ export default function Home() {
               </HStack>
             </Button>
           </VStack>
-        </PageActions>
+        </PageActions> */}
       </VStack>
     </PageContainer>
   );

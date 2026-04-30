@@ -11,7 +11,7 @@ export const useConfirmReservation = (formData: ReservationCreateRequest) => {
 
   const handleConfirm = async () => {
     if (!guidelinesAccepted) {
-      setError('使用事項とガイドラインへの同意が必要です。');
+      setError('使用事項と使用規程への同意が必要です。');
       return;
     }
 

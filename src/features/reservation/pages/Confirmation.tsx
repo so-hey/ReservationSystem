@@ -204,14 +204,14 @@ export default function Confirmation() {
           </Card.Body>
         </AnimatedCard>
 
-        {/* 使用事項とガイドライン確認 */}
+        {/* 使用事項と使用規程確認 */}
         <AnimatedCard delay={0.3}>
           <Card.Root borderColor={guidelinesAccepted ? 'green.300' : 'red.300'} borderWidth="2px">
             <Card.Header bg={guidelinesAccepted ? 'green.50' : 'red.50'}>
               <Heading size="lg" color={guidelinesAccepted ? 'green.700' : 'red.700'}>
                 <HStack>
                   <Text>
-                    {guidelinesAccepted ? '✅' : '⚠️'} 使用事項とガイドラインの確認（必須）
+                    {guidelinesAccepted ? '✅' : '⚠️'} 使用事項と使用規程の確認（必須）
                   </Text>
                 </HStack>
               </Heading>
@@ -219,7 +219,7 @@ export default function Confirmation() {
             <Card.Body>
               <VStack gap={4} align="stretch">
                 <Text fontSize="sm" color="gray.800" lineHeight="1.7" fontWeight="medium">
-                  予約を確定する前に、以下の使用事項とガイドラインをご確認ください：
+                  予約を確定する前に、以下の使用事項と使用規程をご確認ください：
                 </Text>
 
                 <Box p={4} bg="gray.50" borderRadius="md" borderWidth="1px" borderColor="gray.200">
@@ -231,8 +231,6 @@ export default function Confirmation() {
                       • ミーティングルーム使用規程を厳守すること
                       <br />• 職員、保安員が許可書の提示を求めたときは、ただちに提示すること
                       <br />• 使用中施設に損害を与えたときは、修理費等の経費負担をすること
-                      <br />•
-                      課外活動で使用する場合、「課外活動の承認に関するガイドライン」を遵守すること
                     </Text>
                   </VStack>
                 </Box>
@@ -240,11 +238,11 @@ export default function Confirmation() {
                 <Box p={3} bg="blue.50" borderRadius="md" borderWidth="1px" borderColor="blue.200">
                   <VStack gap={2} align="stretch">
                     <Text fontSize="sm" fontWeight="semibold" color="blue.800">
-                      📋 課外活動の承認に関するガイドライン
+                      📋 ミーティングルーム使用規程
                     </Text>
                     <HStack>
                       <Link
-                        href="https://www.u-hyogo.ac.jp/cnas/corona/pdf/activities_guide_R31129.pdf"
+                        href="/pdfs/meeting_room_rules.pdf"
                         target="_blank"
                         rel="noopener noreferrer"
                         color="blue.600"
@@ -252,7 +250,7 @@ export default function Confirmation() {
                         _hover={{ color: 'blue.800' }}
                       >
                         <HStack gap={1}>
-                          <Text>ガイドラインを確認する</Text>
+                          <Text>使用規程を確認する</Text>
                           <LuExternalLink size="14px" />
                         </HStack>
                       </Link>
@@ -279,7 +277,7 @@ export default function Confirmation() {
                       <Checkbox.Indicator />
                     </Checkbox.Control>
                     <Checkbox.Label fontSize="sm" fontWeight="medium" color="yellow.800">
-                      上記の使用事項およびガイドラインを確認し、遵守することに同意します（予約確定に必須）
+                      上記の使用事項および使用規程を確認し、遵守することに同意します（予約確定に必須）
                     </Checkbox.Label>
                   </Checkbox.Root>
                 </Box>
@@ -317,11 +315,11 @@ export default function Confirmation() {
           </Box>
         )}
 
-        {/* ガイドライン同意確認メッセージ */}
+        {/* 使用規程同意確認メッセージ */}
         {!guidelinesAccepted && (
           <Box textAlign="center">
             <Text color="red.600" fontSize="sm" fontWeight="medium">
-              予約を確定するには、使用事項とガイドラインへの同意が必要です
+              予約を確定するには、使用事項と使用規程への同意が必要です
             </Text>
           </Box>
         )}
