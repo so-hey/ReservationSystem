@@ -61,7 +61,7 @@ export function SelectItems({
             <Field.RequiredIndicator />
           </Field.Label>
         </Stack>
-        <Stack w="20%">
+        <Stack w="25%">
           <Controller
             name={formLabel}
             control={control}
