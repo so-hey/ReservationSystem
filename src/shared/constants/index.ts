@@ -1,13 +1,37 @@
 import { AvailableTime } from '../types';
 
 /**
- * 2週間先から1ヶ月先までの日付リスト（土日含む）を生成
+ * 2週先の月曜日から4週先の日曜日までの日付リストを生成
  */
-export const DATE_UNTIL_NEXT_MONTH: string[] = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() + i + 14);
-  return date;
-}).map((date) => date.toISOString().split('T')[0]);
+export const DATE_UNTIL_NEXT_MONTH: string[] = (() => {
+  const today = new Date();
+  const todayDay = today.getDay(); // 0=日, 1=月, ..., 6=土
+  const daysToMonday = todayDay === 0 ? 6 : todayDay - 1;
+
+  // 今週の月曜日
+  const currentMonday = new Date(today);
+  currentMonday.setDate(today.getDate() - daysToMonday);
+  currentMonday.setHours(0, 0, 0, 0);
+
+  // 2週先の月曜日（開始）
+  const startDate = new Date(currentMonday);
+  startDate.setDate(currentMonday.getDate() + 14);
+
+  // 4週先の日曜日（終了）= 今週月曜 + 28日 + 6日
+  const endDate = new Date(currentMonday);
+  endDate.setDate(currentMonday.getDate() + 34);
+
+  const dates: string[] = [];
+  const current = new Date(startDate);
+  while (current <= endDate) {
+    const y = current.getFullYear();
+    const m = String(current.getMonth() + 1).padStart(2, '0');
+    const d = String(current.getDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${d}`);
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+})();
 
 /**
  * 利用可能な時間テーブル（09:00〜20:00, 30分刻み）
