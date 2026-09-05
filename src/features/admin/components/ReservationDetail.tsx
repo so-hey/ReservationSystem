@@ -15,6 +15,7 @@ import { LuImageOff } from 'react-icons/lu';
 import { ReservationStatus } from '@/shared/types';
 import Loading from '@/shared/components/ui/Loading';
 import ReservationDetailTable from './ReservationDetailTable';
+import ReservationActionConfirmDialog from './ReservationActionConfirmDialog';
 import DeleteConfirmDialog from '@/shared/components/ui/DeleteConfirmDialog';
 import { useReservationData } from '../hooks/useReservationData';
 import { useReservationActions } from '../hooks/useReservationActions';
@@ -57,6 +58,10 @@ const ReservationDetail = ({ id, onClose }: ReservationDetailProps) => {
     cancelDelete,
     isApproving,
     isRejecting,
+    pendingAction,
+    actionError,
+    confirmAction,
+    cancelAction,
   } = useReservationActions(id, onClose, data);
 
   // 画像拡大モーダルの状態
@@ -75,9 +80,11 @@ const ReservationDetail = ({ id, onClose }: ReservationDetailProps) => {
       <Root
         open
         onOpenChange={(details: DialogOpenChangeDetails) => {
-          if (!details.open) onClose();
+          if (!details.open && !isApproving && !isRejecting) onClose();
         }}
         {...DIALOG_CONFIG}
+        closeOnEscape={!isApproving && !isRejecting}
+        closeOnInteractOutside={!isApproving && !isRejecting}
       >
         <Portal>
           <Backdrop />
@@ -214,6 +221,7 @@ const ReservationDetail = ({ id, onClose }: ReservationDetailProps) => {
                     colorPalette="orange"
                     onClick={handleReject}
                     loading={isRejecting}
+                    disabled={isApproving}
                     w={{ base: 'full', md: 'auto' }}
                     order={{ base: 2, md: 4 }}
                   >
@@ -226,6 +234,7 @@ const ReservationDetail = ({ id, onClose }: ReservationDetailProps) => {
                     colorPalette="green"
                     onClick={handleConfirm}
                     loading={isApproving}
+                    disabled={isRejecting}
                     w={{ base: 'full', md: 'auto' }}
                     order={{ base: 1, md: 5 }}
                   >
@@ -236,6 +245,17 @@ const ReservationDetail = ({ id, onClose }: ReservationDetailProps) => {
             </Content>
           </Positioner>
         </Portal>
+
+        {pendingAction && data && (
+          <ReservationActionConfirmDialog
+            action={pendingAction}
+            data={data}
+            isSubmitting={isApproving || isRejecting}
+            error={actionError}
+            onClose={cancelAction}
+            onConfirm={confirmAction}
+          />
+        )}
 
         <DeleteConfirmDialog
           isOpen={showDeleteConfirm}

@@ -1,17 +1,19 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { updateReservationStatusAsAdmin, deleteReservation } from '@/lib/functions';
 import { ReservationDetailResponse, ReservationStatus } from '@/shared/types';
 import { formatRoomLabel, formatTimeToHHMM, formatDateOnly } from '@/shared/utils';
 import { APP_CONFIG } from '@/shared/constants';
 
 export const buildGmailUrl = (
-  action: 'approve' | 'reject',
+  action: 'approve' | 'reject' | 'contact',
   data: ReservationDetailResponse,
 ): string => {
   const isApprove = action === 'approve';
   const subject = isApprove
     ? `【承認】ミーティングルーム予約のお知らせ`
-    : `【却下】ミーティングルーム予約のお知らせ`;
+    : action === 'reject'
+      ? `【却下】ミーティングルーム予約のお知らせ`
+      : `【ご連絡】ミーティングルームのご予約について`;
 
   const reservationInfo = [
     '━━━━━━━━━━━━━━━━━━━━━━',
@@ -29,7 +31,9 @@ export const buildGmailUrl = (
 
   const signature = '\n\n神戸商科キャンパス 学生会';
 
-  const body = isApprove
+  const body = action === 'contact'
+    ? `${data.reservatorName} 様\n\nミーティングルームのご予約についてご連絡いたします。\n\n▼▼▼ ご連絡内容の記入欄 ▼▼▼\n【未記入・送信前に必ず編集してください】\nここに連絡内容を記入し、この案内文を削除してください。\n\n\n\n\n▲▲▲ ご連絡内容の記入欄ここまで ▲▲▲\n\n${reservationInfo}\n\nよろしくお願いいたします。${signature}`
+    : isApprove
     ? `${data.reservatorName} 様\n\nこの度はご予約いただきありがとうございます。\n以下の予約が承認されましたのでお知らせいたします。\n\n${reservationInfo}\n\nご利用当日は時間厳守でお願いいたします。\n\n■ 返却手続き（利用終了後にこちらから）\n${returnUrl}\n\n■ キャンセルはこちら\n${cancelUrl}\n\nご不明な点がございましたら、お気軽にお問い合わせください。\n\nよろしくお願いいたします。${signature}`
     : `${data.reservatorName} 様\n\nこの度はご予約いただきありがとうございます。\n誠に申し訳ありませんが、以下のご予約については却下となりましたのでお知らせいたします。\n\n${reservationInfo}\n\nご不明な点がございましたら、お気軽にお問い合わせください。\n\nよろしくお願いいたします。${signature}`;
 
@@ -44,6 +48,8 @@ export const buildGmailUrl = (
   return `https://mail.google.com/mail/?${params.toString()}`;
 };
 
+export type ReservationConfirmAction = 'approve' | 'reject' | 'complete';
+
 export const useReservationActions = (
   id: number,
   onClose: () => void,
@@ -52,36 +58,47 @@ export const useReservationActions = (
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<ReservationConfirmAction | null>(null);
+  const [actionError, setActionError] = useState('');
+  const isSubmitting = useRef(false);
 
-  const handleConfirm = useCallback(async () => {
-    setIsApproving(true);
+  const handleConfirm = useCallback(() => {
+    if (!data || isSubmitting.current) return;
+    setActionError('');
+    setPendingAction(data.status === ReservationStatus.RETURNED ? 'complete' : 'approve');
+  }, [data]);
+
+  const handleReject = useCallback(() => {
+    if (!data || isSubmitting.current) return;
+    setActionError('');
+    setPendingAction('reject');
+  }, [data]);
+
+  const cancelAction = useCallback(() => {
+    if (isSubmitting.current) return;
+    setPendingAction(null);
+    setActionError('');
+  }, []);
+
+  const confirmAction = useCallback(async () => {
+    if (!pendingAction || !data || isSubmitting.current) return;
+    isSubmitting.current = true;
+    setActionError('');
+    const setLoading = pendingAction === 'reject' ? setIsRejecting : setIsApproving;
+    setLoading(true);
     try {
-      if (data?.status === ReservationStatus.RETURNED) {
-        await updateReservationStatusAsAdmin(id, 'complete');
-      } else {
-        await updateReservationStatusAsAdmin(id, 'approve');
-        if (data) window.open(buildGmailUrl('approve', data), '_blank');
-      }
+      await updateReservationStatusAsAdmin(id, pendingAction);
+      if (pendingAction !== 'complete') window.open(buildGmailUrl(pendingAction, data), '_blank');
+      setPendingAction(null);
       onClose();
     } catch (error) {
-      console.error('予約承認に失敗しました:', error);
+      console.error('予約の更新に失敗しました:', error);
+      setActionError('予約の更新に失敗しました。時間をおいて再度お試しください。');
     } finally {
-      setIsApproving(false);
+      isSubmitting.current = false;
+      setLoading(false);
     }
-  }, [id, onClose, data]);
-
-  const handleReject = useCallback(async () => {
-    setIsRejecting(true);
-    try {
-      await updateReservationStatusAsAdmin(id, 'reject');
-      if (data) window.open(buildGmailUrl('reject', data), '_blank');
-      onClose();
-    } catch (error) {
-      console.error('予約却下に失敗しました:', error);
-    } finally {
-      setIsRejecting(false);
-    }
-  }, [id, onClose, data]);
+  }, [id, onClose, data, pendingAction]);
 
   const handleDelete = useCallback(() => {
     setShowDeleteConfirm(true);
@@ -111,5 +128,9 @@ export const useReservationActions = (
     cancelDelete,
     isApproving,
     isRejecting,
+    pendingAction,
+    actionError,
+    confirmAction,
+    cancelAction,
   };
 };
