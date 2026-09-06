@@ -4,10 +4,10 @@ import { ReservationDetailResponse, ReservationStatus } from '@/shared/types';
 import { formatRoomLabel, formatTimeToHHMM, formatDateOnly } from '@/shared/utils';
 import { APP_CONFIG } from '@/shared/constants';
 
-export const buildGmailUrl = (
+const buildEmail = (
   action: 'approve' | 'reject' | 'contact',
   data: ReservationDetailResponse,
-): string => {
+) => {
   const isApprove = action === 'approve';
   const subject = isApprove
     ? `【承認】ミーティングルーム予約のお知らせ`
@@ -37,10 +37,26 @@ export const buildGmailUrl = (
     ? `${data.reservatorName} 様\n\nこの度はご予約いただきありがとうございます。\n以下の予約が承認されましたのでお知らせいたします。\n\n${reservationInfo}\n\nご利用当日は時間厳守でお願いいたします。\n\n■ 返却手続き（利用終了後にこちらから）\n${returnUrl}\n\n■ キャンセルはこちら\n${cancelUrl}\n\nご不明な点がございましたら、お気軽にお問い合わせください。\n\nよろしくお願いいたします。${signature}`
     : `${data.reservatorName} 様\n\nこの度はご予約いただきありがとうございます。\n誠に申し訳ありませんが、以下のご予約については却下となりましたのでお知らせいたします。\n\n${reservationInfo}\n\nご不明な点がございましたら、お気軽にお問い合わせください。\n\nよろしくお願いいたします。${signature}`;
 
+  return { to: data.email, subject, body };
+};
+
+export const buildMailtoUrl = (
+  action: 'approve' | 'reject' | 'contact',
+  data: ReservationDetailResponse,
+): string => {
+  const { to, subject, body } = buildEmail(action, data);
+  return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.replace(/\r?\n/g, '\r\n'))}`;
+};
+
+export const buildGmailUrl = (
+  action: 'approve' | 'reject' | 'contact',
+  data: ReservationDetailResponse,
+): string => {
+  const { to, subject, body } = buildEmail(action, data);
   const params = new URLSearchParams({
     view: 'cm',
     fs: '1',
-    to: data.email,
+    to,
     su: subject,
     body,
     ...(APP_CONFIG.GMAIL_SENDER && { authuser: APP_CONFIG.GMAIL_SENDER }),
@@ -60,6 +76,7 @@ export const useReservationActions = (
   const [isRejecting, setIsRejecting] = useState(false);
   const [pendingAction, setPendingAction] = useState<ReservationConfirmAction | null>(null);
   const [actionError, setActionError] = useState('');
+  const [actionCompleted, setActionCompleted] = useState(false);
   const isSubmitting = useRef(false);
 
   const handleConfirm = useCallback(() => {
@@ -76,21 +93,28 @@ export const useReservationActions = (
 
   const cancelAction = useCallback(() => {
     if (isSubmitting.current) return;
+    if (actionCompleted) {
+      onClose();
+      return;
+    }
     setPendingAction(null);
     setActionError('');
-  }, []);
+  }, [actionCompleted, onClose]);
 
   const confirmAction = useCallback(async () => {
-    if (!pendingAction || !data || isSubmitting.current) return;
+    if (!pendingAction || !data || isSubmitting.current || actionCompleted) return;
     isSubmitting.current = true;
     setActionError('');
     const setLoading = pendingAction === 'reject' ? setIsRejecting : setIsApproving;
     setLoading(true);
     try {
       await updateReservationStatusAsAdmin(id, pendingAction);
-      if (pendingAction !== 'complete') window.open(buildGmailUrl(pendingAction, data), '_blank');
-      setPendingAction(null);
-      onClose();
+      if (pendingAction === 'complete') {
+        setPendingAction(null);
+        onClose();
+      } else {
+        setActionCompleted(true);
+      }
     } catch (error) {
       console.error('予約の更新に失敗しました:', error);
       setActionError('予約の更新に失敗しました。時間をおいて再度お試しください。');
@@ -98,7 +122,7 @@ export const useReservationActions = (
       isSubmitting.current = false;
       setLoading(false);
     }
-  }, [id, onClose, data, pendingAction]);
+  }, [id, onClose, data, pendingAction, actionCompleted]);
 
   const handleDelete = useCallback(() => {
     setShowDeleteConfirm(true);
@@ -130,6 +154,7 @@ export const useReservationActions = (
     isRejecting,
     pendingAction,
     actionError,
+    actionCompleted,
     confirmAction,
     cancelAction,
   };

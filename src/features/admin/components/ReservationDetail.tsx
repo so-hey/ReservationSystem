@@ -60,6 +60,7 @@ const ReservationDetail = ({ id, onClose }: ReservationDetailProps) => {
     isRejecting,
     pendingAction,
     actionError,
+    actionCompleted,
     confirmAction,
     cancelAction,
   } = useReservationActions(id, onClose, data);
@@ -252,6 +253,7 @@ const ReservationDetail = ({ id, onClose }: ReservationDetailProps) => {
             data={data}
             isSubmitting={isApproving || isRejecting}
             error={actionError}
+            completed={actionCompleted}
             onClose={cancelAction}
             onConfirm={confirmAction}
           />

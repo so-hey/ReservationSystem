@@ -1,4 +1,4 @@
-import { Box, Table, Badge, Link } from "@chakra-ui/react";
+import { Box, Table, Badge, Link, VStack } from "@chakra-ui/react";
 import { ReservationDetailResponse } from "@/shared/types";
 import {
   formatRoomLabel,
@@ -8,7 +8,7 @@ import {
   getActualStatus,
 } from "@/shared/utils";
 
-import { buildGmailUrl } from "../hooks/useReservationActions";
+import { buildGmailUrl, buildMailtoUrl } from "../hooks/useReservationActions";
 
 interface ReservationDetailTableProps {
   data?: ReservationDetailResponse;
@@ -98,6 +98,7 @@ const ReservationDetailTable = ({ data }: ReservationDetailTableProps) => {
               <Table.Cell {...TABLE_STYLES.cell}>{data?.studentId}</Table.Cell>
               <Table.Cell {...TABLE_STYLES.cell}>
                 {data?.email ? (
+                  <VStack gap={1}>
                   <Link
                     href={buildGmailUrl("contact", data)}
                     target="_blank"
@@ -108,6 +109,10 @@ const ReservationDetailTable = ({ data }: ReservationDetailTableProps) => {
                   >
                     {data.email}
                   </Link>
+                  <Link href={buildMailtoUrl("contact", data)} color="blue.700" textDecoration="underline" fontSize="sm">
+                    メールアプリで作成
+                  </Link>
+                  </VStack>
                 ) : null}
               </Table.Cell>
               <Table.Cell {...TABLE_STYLES.cell}>
