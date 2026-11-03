@@ -2,6 +2,28 @@
 
 モダンな React アプリケーション構成でリファクタリングされた予約システムです。
 
+## システム構成
+
+このリポジトリは予約・返却・管理画面を提供するReactフロントエンドです。HonoのHTTP APIを呼び出し、バックエンドがPrisma経由でPostgreSQL、画像保存にSupabase Storageを利用します。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture/overview-dark.png">
+  <img src="docs/architecture/overview.png" alt="システム全体の構成図：ReactからHono APIを呼び出し、Prisma経由でPostgreSQLへ接続。返却画像はSupabase Storageへ保存。">
+</picture>
+
+### コードの構造
+
+`app/` が画面全体を組み立て、`features/` が予約・認証・管理機能、`shared/` が共通UI・型・定数を担当します。主要な予約・管理処理は現在も `lib/functions.ts` と `lib/api.ts` を利用しています。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture/structure-dark.png">
+  <img src="docs/architecture/structure.png" alt="コード構造図：Reactのapp・features・lib・sharedと、Honoのserver・routes・utils・Prismaの関係。">
+</picture>
+
+[図の根拠・補足・再生成手順](docs/architecture/README.md) · [全体図のHTML](docs/architecture/index.html) · [コード構造のHTML](docs/architecture/structure.html)
+
+HTMLはローカルでブラウザから開くと配色を切り替えられます。GitHub上では上の画像で閲覧できます。図は2026-11-03時点のソースに基づき、デプロイ先など未確認の情報は図中に明記しています。
+
 ## ディレクトリ構成
 
 ```
@@ -37,8 +59,7 @@ src/
 │   ├── api/                     # 共有API設定
 │   ├── types/                   # 型定義
 │   └── constants/               # 定数
-├── hooks/                       # 互換レイヤー（旧コード用）
-└── lib/                         # レガシー（削除予定）
+└── lib/                         # 現在の主要なAPI呼び出し・通信ヘルパー
 ```
 
 ## 機能
@@ -63,7 +84,7 @@ src/
 
 ## 技術スタック
 
-- **React 18** with TypeScript
+- **React 19** with TypeScript
 - **Chakra UI v3** for UI components
 - **React Router v7** for routing
 - **React Hook Form** for form management
